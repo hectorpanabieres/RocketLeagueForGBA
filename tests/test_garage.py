@@ -181,6 +181,25 @@ int main(void) {
         ball.pos=(Vector3){0,BALL_RADIUS,0};ball.vel=(Vector3){0,-64,0};
         update_ball_physics();assert(ball.pos.y==BALL_RADIUS && ball.vel.y==0);
     }
+    /* Even almost coincident diagonal contacts have unit-length normals. */
+    for(int x=-32;x<=32;x++)for(int y=-32;y<=32;y++) {
+        Vector3 n=contact_normal(x,y,17);
+        assert(n.x*n.x+n.y*n.y+n.z*n.z<=256*256);
+        Vector3 opposite=contact_normal(-x,-y,-17);
+        assert(n.x==-opposite.x && n.y==-opposite.y && n.z==-opposite.z);
+    }
+    /* Soft floor contacts settle, but deliberate upward motion survives. */
+    {
+        is_hockey_match=0;
+        ball.pos=(Vector3){0,BALL_RADIUS,0};ball.vel=(Vector3){0,-220,0};
+        update_ball_physics();assert(ball.pos.y==BALL_RADIUS && ball.vel.y==0);
+        for(int i=0;i<60;i++)update_ball_physics();
+        assert(ball.pos.y==BALL_RADIUS && ball.vel.y==0);
+        ball.pos=(Vector3){0,BALL_RADIUS-100,0};ball.vel=(Vector3){0,64,0};
+        update_ball_physics();assert(ball.pos.y==BALL_RADIUS && ball.vel.y>0);
+        ball.pos=(Vector3){0,BALL_RADIUS,0};ball.vel=(Vector3){0,-4*256,0};
+        update_ball_physics();assert(ball.vel.y>2*256);
+    }
     /* Mirrored contacts must impart identical speed in opposite directions. */
     {
         int result[2];

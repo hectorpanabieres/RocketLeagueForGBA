@@ -266,6 +266,8 @@ void init_3d_engine(void) {
         pal_bg_mem[192+i]=RGB5(shade,shade,shade<30?shade+1:31);
     }
 
+    for(int i=0;i<8;i++)pal_bg_mem[233+i]=RGB5(10+i,22+i,31); /* clear hockey sky */
+
     pal_bg_mem[232]=RGB5(4,24,6); /* subtle grass grain beside index 135 */
 
     for(int i=1;i<=1024;i++)projection_reciprocal[i]=16777216u/i;
@@ -378,7 +380,10 @@ IWRAM_CODE void draw_environment_background(u8 sky_color) {
         /* Eight smooth sky bands and a low-contrast grass weave use bulk word
            fills, avoiding a per-pixel texture sampler in the Speed preset. */
         if(sky_color==14) {
-            memset32(frame_buffer,14u*0x01010101u,start_y*60);
+            for(int band=0;band<8;band++) {
+                int top=start_y*band/8,bottom=start_y*(band+1)/8;
+                memset32(frame_buffer+top*240,(233u+band)*0x01010101u,(bottom-top)*60);
+            }
             memset32(frame_buffer+start_y*240,14u*0x01010101u,(160-start_y)*60);
         } else {
             for(int band=0;band<8;band++) {
@@ -400,14 +405,14 @@ IWRAM_CODE void draw_environment_background(u8 sky_color) {
     int out_start_y = aligned_start_y / RENDER_SCALE;
 
     // Sixteen sky shades blend smoothly into the existing horizon haze
-    // For hockey use white/light palette, for soccer use graduated blue sky.
+    // Keep the hockey sky blue and visually separate from the white ice.
     int is_hockey = (sky_color == 14);
     if (out_start_y > 0) {
         int sky_rows = out_start_y;
         for (int y = 0; y < sky_rows; y++) {
             u8 band;
             if (is_hockey) {
-                band = sky_color; /* flat white for hockey arena */
+                band = 233+(y*7)/(sky_rows>1?sky_rows-1:1); /* clear blue above white ice */
             } else {
                 int t = (y * (SKY_GRADIENT_COUNT - 1)) / (sky_rows > 1 ? sky_rows - 1 : 1);
                 band = SKY_GRADIENT_START + t;

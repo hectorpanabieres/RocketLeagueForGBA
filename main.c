@@ -1531,10 +1531,17 @@ void update_ball_physics(void) {
     if (ball.pos.y <= half_height) {
         if(ball.vel.y < -FP_SCALE)audio_impact(-ball.vel.y);
         ball.pos.y = half_height;
-        ball.vel.y = ball.vel.y<0 ? -ball.vel.y*(is_hockey_match?18:65)/100 : ball.vel.y;
-        if(ball.vel.y < (is_hockey_match?FP_SCALE:FP_SCALE/2)) ball.vel.y=0;
-        ball.vel.x = (ball.vel.x * (is_hockey_match?255:253)) / 256; // Ground friction
-        ball.vel.z = (ball.vel.z * (is_hockey_match?255:253)) / 256;
+        if(ball.vel.y<0) {
+            fixed impact=-ball.vel.y;
+            /* Soft contacts settle; firm shots retain their familiar rebound. */
+            if(impact<FP_SCALE)ball.vel.y=0;
+            else {
+                ball.vel.y=impact*(is_hockey_match?18:65)/100;
+                if(ball.vel.y<(is_hockey_match?FP_SCALE:FP_SCALE/2))ball.vel.y=0;
+            }
+        }
+        ball.vel.x = is_hockey_match?ball.vel.x:(ball.vel.x * 253) / 256; // Ice keeps its glide
+        ball.vel.z = is_hockey_match?ball.vel.z:(ball.vel.z * 253) / 256;
     }
 
     // 2. Ceiling collision
@@ -1555,7 +1562,9 @@ void update_ball_physics(void) {
         fixed impact=FP_MUL(ball.vel.x,normal.x)+FP_MUL(ball.vel.y,normal.y)+FP_MUL(ball.vel.z,normal.z);
         if(impact<0) {
             if(impact < -FP_SCALE)audio_impact(-impact);
-            impact=impact*170/100;
+            /* Remove inward motion on gentle ramp/wall contacts without
+               adding a tiny rebound every simulation tick. */
+            impact=impact*(-impact<FP_SCALE?100:170)/100;
             ball.vel.x-=FP_MUL(normal.x,impact);
             ball.vel.y-=FP_MUL(normal.y,impact);
             ball.vel.z-=FP_MUL(normal.z,impact);
@@ -1620,6 +1629,16 @@ static int collision_sqrt(unsigned int value) {
     return (int)root;
 }
 
+/* Called only after the small contact-volume check, so full precision fits.
+   Round length upward: a normal must never be longer than one unit. */
+static Vector3 contact_normal(fixed dx,fixed dy,fixed dz) {
+    unsigned int squared=dx*dx+dy*dy+dz*dz;
+    int length=collision_sqrt(squared);
+    if(!length)return (Vector3){0,0,0};
+    if((unsigned int)(length*length)<squared)length++;
+    return (Vector3){dx*256/length,dy*256/length,dz*256/length};
+}
+
 int check_car_ball_collision(Car *car) {
     fixed dx = ball.pos.x - car->pos.x;
     int flat_hit=is_hockey_match && ball.pos.y<=PUCK_HALF_HEIGHT+FP_SCALE && car->pos.y<CAR_RADIUS;
@@ -1636,16 +1655,12 @@ int check_car_ball_collision(Car *car) {
     int32_t min_coll_sq_s = (min_coll >> 4) * (min_coll >> 4);
 
     if (dist_sq_s < min_coll_sq_s) {
-        int32_t dist_s = collision_sqrt(dist_sq_s);
-        if (dist_s == 0) dist_s = 1;
-
         /* Symmetric division avoids stronger hits in negative directions. */
-        fixed nx=dx_s*256/dist_s;
-        fixed ny=dy_s*256/dist_s;
-        fixed nz=dz_s*256/dist_s;
+        Vector3 normal=contact_normal(dx,dy,dz);
+        fixed nx=normal.x,ny=normal.y,nz=normal.z;
 
         /* Coincident centers need a defined contact normal as well. */
-        if (!dx_s && !dy_s && !dz_s) {
+        if (!dx && !dy && !dz) {
             nx=custom_sin_fp[car->yaw&255];ny=0;nz=custom_cos_fp[car->yaw&255];
         }
 
@@ -1727,12 +1742,11 @@ void check_car_car_collision(Car *c1, Car *c2) {
         int32_t dist_s = collision_sqrt(dist_sq_s);
         if (dist_s == 0) dist_s = 1;
 
-        fixed nx=dx_s*256/dist_s;
-        fixed ny=dy_s*256/dist_s;
-        fixed nz=dz_s*256/dist_s;
+        Vector3 normal=contact_normal(dx,dy,dz);
+        fixed nx=normal.x,ny=normal.y,nz=normal.z;
 
         /* Coincident centers otherwise produce a zero normal and stay stuck. */
-        if(!dx_s && !dy_s && !dz_s){nx=256;ny=0;nz=0;}
+        if(!dx && !dy && !dz){nx=256;ny=0;nz=0;}
 
         fixed overlap = min_coll - (dist_s << 4);
 
@@ -1970,14 +1984,16 @@ static void draw_hud_box(int x, int y, int width, int height, u8 fill, u8 edge) 
 
 static void draw_ball_indicator(void) {
     int x,y;
+    u8 marker=is_hockey_match?145:131;
+    int tracking_distance=is_hockey_match?120:200;
     if (!world_target_indicator(ball.pos,&x,&y)) {
         int dx=(ball.pos.x-player.pos.x)/256,dz=(ball.pos.z-player.pos.z)/256;
-        if(dx*dx+dz*dz>200*200 && project_vertex_world(ball.pos,&x,&y) &&
+        if(dx*dx+dz*dz>tracking_distance*tracking_distance && project_vertex_world(ball.pos,&x,&y) &&
            x>12 && x<228 && y>28 && y<132) {
             /* Four small corner marks keep a distant ball easy to follow. */
             for(int side=-1;side<=1;side+=2)for(int up=-1;up<=1;up+=2) {
-                draw_line(x+side*8,y+up*8,x+side*5,y+up*8,131);
-                draw_line(x+side*8,y+up*8,x+side*8,y+up*5,131);
+                draw_line(x+side*8,y+up*8,x+side*5,y+up*8,marker);
+                draw_line(x+side*8,y+up*8,x+side*8,y+up*5,marker);
             }
         }
         return;
@@ -1986,12 +2002,12 @@ static void draw_ball_indicator(void) {
     int length=abs(dx)>abs(dy)?abs(dx):abs(dy);
     if(!length) return;
     dx=dx*5/length;dy=dy*5/length;
-    draw_line(x,y,x-dx-dy,y-dy+dx,130);
-    draw_line(x,y,x-dx+dy,y-dy-dx,130);
+    draw_line(x,y,x-dx-dy,y-dy+dx,is_hockey_match?145:130);
+    draw_line(x,y,x-dx+dy,y-dy-dx,is_hockey_match?145:130);
     int label_x=x-16;
     if(label_x<4)label_x=4;
     if(label_x>204)label_x=204;
-    draw_hud_text("BALL",label_x,y>90?y-12:y+8,130);
+    draw_hud_text(is_hockey_match?"PUCK":"BALL",label_x,y>90?y-12:y+8,is_hockey_match?145:130);
 }
 
 static void draw_match_hud(void) {
@@ -2017,7 +2033,7 @@ static void draw_match_hud(void) {
             else if(!player.is_on_ground)
                 draw_hud_text(player.can_double_jump?"A: FLIP":control_scheme?"AIR CONTROL":"R: AIR",4,138,130);
         }
-        draw_hud_text(game_state==STATE_REPLAY?"REPLAY":cam_mode?"CAM:BALL":"CAM:CHASE",4,150,130);
+        draw_hud_text(game_state==STATE_REPLAY?"REPLAY":cam_mode?(is_hockey_match?"CAM:PUCK":"CAM:BALL"):"CAM:CHASE",4,150,130);
         return;
     }
     if (game_state == STATE_REPLAY) {
@@ -2025,7 +2041,7 @@ static void draw_match_hud(void) {
     } else if (cam_mode == 0) {
         draw_hud_text("L: CHASE", 62, 134, 130);
     } else {
-        draw_hud_text("L: BALL", 62, 134, 131);
+        draw_hud_text(is_hockey_match?"L: PUCK":"L: BALL", 62, 134, 131);
     }
 }
 
@@ -3231,7 +3247,7 @@ int main(void) {
             draw_menu_screen(game_state, menu_selection);
         } else {
             // Gameplay: sky + raycast ground seamlessly merged
-            u8 sky_col = is_hockey_match ? 14 : 128; /* bright white/light for hockey arena */
+            u8 sky_col = is_hockey_match ? 14 : 128; /* hockey sky/ice palette selector */
             draw_environment_background(sky_col);
 
             if(performance_mode!=2)draw_stadium_crowd(cam_pos, CAGE_WIDTH, CAGE_LENGTH);

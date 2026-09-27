@@ -425,54 +425,90 @@ Mesh goal_mesh = {
 };
 
 /* ==============================================================================
-   8. HOCKEY PUCK MODEL (flat cylinder approximated as hexagonal prism)
+   8. HOCKEY PUCK MODEL (flat cylinder with twelve-sided silhouette)
    ============================================================================== */
 #define PUCK_R  INT_TO_FP(12)  /* radius */
 #define PUCK_H  INT_TO_FP(4)   /* half-height */
 
-static const Vector3 puck_vertices[14] = {
-    /* Top ring (6 vertices) */
-    {  PUCK_R,        PUCK_H,       0            }, // 0
-    {  INT_TO_FP(6),  PUCK_H,  INT_TO_FP(10)    }, // 1
-    { -INT_TO_FP(6),  PUCK_H,  INT_TO_FP(10)    }, // 2
-    { -PUCK_R,        PUCK_H,       0            }, // 3
-    { -INT_TO_FP(6),  PUCK_H, -INT_TO_FP(10)    }, // 4
-    {  INT_TO_FP(6),  PUCK_H, -INT_TO_FP(10)    }, // 5
-    /* Bottom ring (6 vertices) */
-    {  PUCK_R,       -PUCK_H,       0            }, // 6
-    {  INT_TO_FP(6), -PUCK_H,  INT_TO_FP(10)    }, // 7
-    { -INT_TO_FP(6), -PUCK_H,  INT_TO_FP(10)    }, // 8
-    { -PUCK_R,       -PUCK_H,       0            }, // 9
-    { -INT_TO_FP(6), -PUCK_H, -INT_TO_FP(10)    }, // 10
-    {  INT_TO_FP(6), -PUCK_H, -INT_TO_FP(10)    }, // 11
-    /* Centre caps */
-    {  0,             PUCK_H,       0            }, // 12 top centre
-    {  0,            -PUCK_H,       0            }  // 13 bottom centre
+static const Vector3 puck_vertices[26] = {
+    { 3072, 1024, 0 },
+    { 2660, 1024, 1536 },
+    { 1536, 1024, 2660 },
+    { 0, 1024, 3072 },
+    { -1536, 1024, 2660 },
+    { -2660, 1024, 1536 },
+    { -3072, 1024, 0 },
+    { -2660, 1024, -1536 },
+    { -1536, 1024, -2660 },
+    { 0, 1024, -3072 },
+    { 1536, 1024, -2660 },
+    { 2660, 1024, -1536 },
+    { 3072, -1024, 0 },
+    { 2660, -1024, 1536 },
+    { 1536, -1024, 2660 },
+    { 0, -1024, 3072 },
+    { -1536, -1024, 2660 },
+    { -2660, -1024, 1536 },
+    { -3072, -1024, 0 },
+    { -2660, -1024, -1536 },
+    { -1536, -1024, -2660 },
+    { 0, -1024, -3072 },
+    { 1536, -1024, -2660 },
+    { 2660, -1024, -1536 },
+    { 0, 1024, 0 },
+    { 0, -1024, 0 },
 };
-
-static const Face puck_faces[24] = {
-    /* Top cap (fan from vertex 12) */
-    { 12, 0, 1, 0 }, { 12, 1, 2, 0 }, { 12, 2, 3, 0 },
-    { 12, 3, 4, 0 }, { 12, 4, 5, 0 }, { 12, 5, 0, 0 },
-    /* Bottom cap (fan from vertex 13, flipped) */
-    { 13, 7, 6, 0 }, { 13, 8, 7, 0 }, { 13, 9, 8, 0 },
-    { 13, 10, 9, 0 }, { 13, 11, 10, 0 }, { 13, 6, 11, 0 },
-    /* Side quads (2 tris each) */
-    { 0, 6, 7, 0 }, { 0, 7, 1, 0 },
-    { 1, 7, 8, 0 }, { 1, 8, 2, 0 },
-    { 2, 8, 9, 0 }, { 2, 9, 3, 0 },
-    { 3, 9, 10, 0 }, { 3, 10, 4, 0 },
-    { 4, 10, 11, 0 }, { 4, 11, 5, 0 },
-    { 5, 11, 6, 0 }, { 5, 6, 0, 0 }
+static const Face puck_faces[48] = {
+    { 24, 1, 0, 0 },
+    { 25, 12, 13, 0 },
+    { 0, 13, 12, 0 },
+    { 0, 1, 13, 0 },
+    { 24, 2, 1, 0 },
+    { 25, 13, 14, 0 },
+    { 1, 14, 13, 0 },
+    { 1, 2, 14, 0 },
+    { 24, 3, 2, 0 },
+    { 25, 14, 15, 0 },
+    { 2, 15, 14, 0 },
+    { 2, 3, 15, 0 },
+    { 24, 4, 3, 0 },
+    { 25, 15, 16, 0 },
+    { 3, 16, 15, 0 },
+    { 3, 4, 16, 0 },
+    { 24, 5, 4, 0 },
+    { 25, 16, 17, 0 },
+    { 4, 17, 16, 0 },
+    { 4, 5, 17, 0 },
+    { 24, 6, 5, 0 },
+    { 25, 17, 18, 0 },
+    { 5, 18, 17, 0 },
+    { 5, 6, 18, 0 },
+    { 24, 7, 6, 0 },
+    { 25, 18, 19, 0 },
+    { 6, 19, 18, 0 },
+    { 6, 7, 19, 0 },
+    { 24, 8, 7, 0 },
+    { 25, 19, 20, 0 },
+    { 7, 20, 19, 0 },
+    { 7, 8, 20, 0 },
+    { 24, 9, 8, 0 },
+    { 25, 20, 21, 0 },
+    { 8, 21, 20, 0 },
+    { 8, 9, 21, 0 },
+    { 24, 10, 9, 0 },
+    { 25, 21, 22, 0 },
+    { 9, 22, 21, 0 },
+    { 9, 10, 22, 0 },
+    { 24, 11, 10, 0 },
+    { 25, 22, 23, 0 },
+    { 10, 23, 22, 0 },
+    { 10, 11, 23, 0 },
+    { 24, 0, 11, 0 },
+    { 25, 23, 12, 0 },
+    { 11, 12, 23, 0 },
+    { 11, 0, 12, 0 },
 };
-
-Mesh puck_mesh = {
-    "PUCK",
-    14,
-    24,
-    puck_vertices,
-    puck_faces
-};
+Mesh puck_mesh = { "PUCK",26,48,puck_vertices,puck_faces };
 
 /* Placeholder stadium_arena_mesh (empty box) */
 Mesh stadium_arena_mesh = {
@@ -490,7 +526,7 @@ Mesh stadium_arena_mesh = {
 
 
 static Vector3 sphere_normals[SPHERE_FCOUNT] EWRAM_MODEL_DATA;
-static Vector3 puck_normals[24] EWRAM_MODEL_DATA;
+static Vector3 puck_normals[48] EWRAM_MODEL_DATA;
 static Vector3 goal_normals[10] EWRAM_MODEL_DATA;
 
 static void compute_normals(const Vector3 *verts, const Face *faces, int nfaces, Vector3 *out) {
@@ -540,7 +576,7 @@ void init_mesh_normals(void) {
     }
     compute_normals(sphere_verts,far_ball_faces,20,far_ball_normals);
     compute_normals(sphere_verts,      sphere_faces,   SPHERE_FCOUNT, sphere_normals);
-    compute_normals(puck_vertices,     puck_faces,     24,            puck_normals);
+    compute_normals(puck_vertices,     puck_faces,     48,            puck_normals);
     compute_normals(goal_vertices,     goal_faces,     10,            goal_normals);
 
     car_mesh.face_normals      = car_normals;

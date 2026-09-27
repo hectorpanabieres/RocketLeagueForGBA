@@ -311,3 +311,24 @@ contact distances and a fallback normal let coincident cars separate reliably.
 Car–ball contact now uses symmetric fixed-point normals and impulses, so
 mirrored hits have matching strength. Penetration correction keeps the ball
 inside the floor and ceiling instead of briefly pushing it through them.
+
+Very close car/ball and car/car contacts now compute normals at full fixed-point
+precision, with conservative length rounding. This prevents tiny diagonal
+overlaps from amplifying collision impulses and preserves mirrored behaviour.
+
+Soft floor and curved-wall contacts now settle without tiny repeated rebounds,
+while firm impacts keep their normal bounce. Floor correction also preserves
+small upward impulses rather than cancelling a legitimate lift.
+
+Hockey uses a rounder twelve-sided puck with outward-facing surfaces. Ice
+glide now applies drag once rather than stacking extra ground friction. Use
+`python3 tools/benchmark_fps.py --mode hockey --scenario boost` to measure
+the hockey match separately.
+
+Hockey now has a clear blue sky in every graphics mode, distinct from white
+ice, plus team-coloured goal creases for orientation. The sky still uses bulk
+colour fills to keep rendering inexpensive.
+
+Hockey tracking markers use dark blue for contrast on ice and appear from
+120 units away (soccer keeps 200). Off-screen indicators and the tracking
+camera label now correctly name the puck.

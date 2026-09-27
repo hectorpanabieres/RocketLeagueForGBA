@@ -380,6 +380,14 @@ void draw_hockey_markings(fixed width,fixed length) {
         draw_world_line((Vector3){-width+WALL_CURVE_RADIUS,256,z},
                         (Vector3){width-WALL_CURVE_RADIUS,256,z},zone?146:28);
     }
+    /* Team-coloured creases identify the defended ends at a glance. */
+    for(int side=-1;side<=1;side+=2) {
+        fixed z=side*(length-32*256);
+        u8 color=side<0?146:131;
+        draw_world_line((Vector3){-48*256,256,z},(Vector3){48*256,256,z},color);
+        draw_world_line((Vector3){-48*256,256,z},(Vector3){-48*256,256,side*length},color);
+        draw_world_line((Vector3){48*256,256,z},(Vector3){48*256,256,side*length},color);
+    }
     for(int spot=0;spot<5;spot++) {
         fixed cx=spot?((spot&1)?-130:130)*256:0;
         fixed cz=spot?((spot<3)?-230:230)*256:0;
